@@ -25,7 +25,11 @@ from utils.dice_score import dice_loss
 # dir_mask = Path(r'D:\Files\Data\Carvana_Image_Masking_Challenge\train_masks')
 # 无人船河道检测数据集
 dir_img = Path(r'D:\Files\Data\USVInlandDataset\Water Segmentation\training\training\640_320_undistorted')
-dir_mask = Path(r'D:\Files\Data\USVInlandDataset\Water Segmentation\training\training\640_320_undistorted_gt')
+# dir_mask = Path(r'D:\Files\Data\USVInlandDataset\Water Segmentation\training\training\640_320_undistorted_gt')
+# dir_mask = Path(r'D:\Files\Data\USVInlandDataset\Water Segmentation\training\training\640_320_undistorted_labelIds2')
+dir_mask = Path(r'D:\Files\Data\USVInlandDataset\Water Segmentation\training\training\640_320_undistorted_gif')
+# mask_suffix = '_gtFine_labelIds'
+mask_suffix = '_mask'
 dir_checkpoint = Path('./checkpoints/')
 
 
@@ -45,9 +49,9 @@ def train_model(
 ):
     # 1. Create dataset
     try:
-        dataset = CarvanaDataset(dir_img, dir_mask, img_scale)
+        dataset = CarvanaDataset(dir_img, dir_mask, img_scale, mask_suffix)
     except (AssertionError, RuntimeError, IndexError):
-        dataset = BasicDataset(dir_img, dir_mask, img_scale)
+        dataset = BasicDataset(dir_img, dir_mask, img_scale, mask_suffix)
 
     # 2. Split into train / validation partitions
     n_val = int(len(dataset) * val_percent)
