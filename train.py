@@ -19,8 +19,10 @@ from unet import UNet
 from utils.data_loading import BasicDataset, CarvanaDataset
 from utils.dice_score import dice_loss
 
-dir_img = Path('./data/imgs/')
-dir_mask = Path('./data/masks/')
+# dir_img = Path('./data/imgs/')
+# dir_mask = Path('./data/masks/')
+dir_img = Path(r'D:\Files\Data\Carvana_Image_Masking_Challenge\train')
+dir_mask = Path(r'D:\Files\Data\Carvana_Image_Masking_Challenge\train_masks')
 dir_checkpoint = Path('./checkpoints/')
 
 
