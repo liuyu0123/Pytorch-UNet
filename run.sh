@@ -4,6 +4,8 @@ python train.py --amp
 
 #训练模型（禁用wandb）
 python train_disable_wandb.py --amp
+#训练模型（禁用wandb），去掉--amp防止训练发散
+python train_disable_wandb.py
 
 #测试模型
 #测试并保存结果
@@ -12,4 +14,5 @@ python predict.py --model ./checkpoints/checkpoint_epoch5.pth -i "D:\Files\Data\
 python predict.py --model ./checkpoints1_trained_gt/checkpoint_epoch1.pth -i "D:\Files\Data\USVInlandDataset\Water Segmentation\training\training\640_320_undistorted\H05_1_0000000000.jpg" --viz --no-save
 python predict.py --model ./checkpoints2_trained_lds/checkpoint_epoch1.pth -i "D:\Files\Data\USVInlandDataset\Water Segmentation\training\training\640_320_undistorted\H05_1_0000000000.jpg" --viz --no-save
 python predict.py --model ./checkpoints3_trained_gif/checkpoint_epoch1.pth -i "D:\Files\Data\USVInlandDataset\Water Segmentation\training\training\640_320_undistorted\H05_1_0000000000.jpg" --viz --no-save
+python predict.py --model ./checkpoints4_trained_gif_noamp/checkpoint_epoch5.pth -i "D:\Files\Data\USVInlandDataset\Water Segmentation\training\training\640_320_undistorted\H05_1_0000000000.jpg" --viz --no-save
 python predict.py --model ./checkpoints/checkpoint_epoch1.pth -i "D:\Files\Data\USVInlandDataset\Water Segmentation\training\training\640_320_undistorted\H05_1_0000000000.jpg" --viz --no-save
