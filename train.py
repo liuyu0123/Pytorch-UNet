@@ -21,8 +21,11 @@ from utils.dice_score import dice_loss
 
 # dir_img = Path('./data/imgs/')
 # dir_mask = Path('./data/masks/')
-dir_img = Path(r'D:\Files\Data\Carvana_Image_Masking_Challenge\train')
-dir_mask = Path(r'D:\Files\Data\Carvana_Image_Masking_Challenge\train_masks')
+# dir_img = Path(r'D:\Files\Data\Carvana_Image_Masking_Challenge\train')
+# dir_mask = Path(r'D:\Files\Data\Carvana_Image_Masking_Challenge\train_masks')
+# 无人船河道检测数据集
+dir_img = Path(r'D:\Files\Data\USVInlandDataset\Water Segmentation\training\training\640_320_undistorted')
+dir_mask = Path(r'D:\Files\Data\USVInlandDataset\Water Segmentation\training\training\640_320_undistorted_gt')
 dir_checkpoint = Path('./checkpoints/')
 
 

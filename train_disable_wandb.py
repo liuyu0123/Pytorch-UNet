@@ -21,8 +21,11 @@ from utils.dice_score import dice_loss
 
 # dir_img = Path('./data/imgs/')
 # dir_mask = Path('./data/masks/')
-dir_img = Path(r'D:\Files\Data\Carvana_Image_Masking_Challenge\train')
-dir_mask = Path(r'D:\Files\Data\Carvana_Image_Masking_Challenge\train_masks')
+# dir_img = Path(r'D:\Files\Data\Carvana_Image_Masking_Challenge\train')
+# dir_mask = Path(r'D:\Files\Data\Carvana_Image_Masking_Challenge\train_masks')
+# 无人船河道检测数据集
+dir_img = Path(r'D:\Files\Data\USVInlandDataset\Water Segmentation\training\training\640_320_undistorted')
+dir_mask = Path(r'D:\Files\Data\USVInlandDataset\Water Segmentation\training\training\640_320_undistorted_gt')
 dir_checkpoint = Path('./checkpoints/')
 
 
@@ -52,7 +55,8 @@ def train_model(
     train_set, val_set = random_split(dataset, [n_train, n_val], generator=torch.Generator().manual_seed(0))
 
     # 3. Create data loaders
-    loader_args = dict(batch_size=batch_size, num_workers=os.cpu_count(), pin_memory=True)
+    # loader_args = dict(batch_size=batch_size, num_workers=os.cpu_count(), pin_memory=True)
+    loader_args = dict(batch_size=batch_size, num_workers=8, pin_memory=True)
     train_loader = DataLoader(train_set, shuffle=True, **loader_args)
     val_loader = DataLoader(val_set, shuffle=False, drop_last=True, **loader_args)
 
