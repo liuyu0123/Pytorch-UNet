@@ -7,6 +7,22 @@ python train_disable_wandb.py --amp
 #训练模型（禁用wandb），去掉--amp防止训练发散
 python train_disable_wandb.py
 
+#训练模型（带参数版本）
+# 基础用法
+python train_disable_wandb_params.py `
+    -i "D:/Files/Data/USVInlandDataset/Water Segmentation/training/training/640_320_undistorted" `
+    -m "D:/Files/Data/USVInlandDataset/Water Segmentation/training/training/640_320_undistorted_gif"
+# 完整参数示例
+python train_disable_wandb_params.py `
+    -i "D:/Files/Data/images" `
+    -m "D:/Files/Data/masks" `
+    --mask-suffix "_mask" `
+    -e 10 `
+    -b 4 `
+    -l 1e-4 `
+    --amp
+
+
 #测试模型
 #测试并保存结果
 python predict.py --model ./checkpoints/checkpoint_epoch5.pth -i "D:\Files\Data\USVInlandDataset\Water Segmentation\training\training\640_320_undistorted\H05_1_0000000000.jpg" -o output.jpg
