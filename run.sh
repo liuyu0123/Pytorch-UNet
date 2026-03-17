@@ -22,6 +22,27 @@ python train_disable_wandb_params.py `
     -l 1e-4 `
     --amp
 
+#训练模型（train和val分离版本）
+#方式1：自动划分（原脚本行为）
+python train_water.py `
+    --images data/all/images `
+    --masks data/all/masks `
+    --validation 10
+#方式2：使用预分好的 train/val
+python train_water.py `
+    --images D:\Files\Data\IRWSB\train\images `
+    --masks D:\Files\Data\IRWSB\train\masks_white `
+    --val-images D:\Files\Data\IRWSB\val\images `
+    --val-masks D:\Files\Data\IRWSB\val\masks_white
+#方式3：混合精度 + 多 workers（Linux/Mac）
+python train_water.py `
+    --images data/train/images `
+    --masks data/train/masks `
+    --val-images data/val/images `
+    --val-masks data/val/masks `
+    --amp `
+    --workers 4 `
+    --epochs 50
 
 #测试模型
 #测试并保存结果
