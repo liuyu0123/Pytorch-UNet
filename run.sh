@@ -44,7 +44,24 @@ python train_water.py `
     --workers 4 `
     --epochs 50
 
-#测试模型
+#测试模型（测试集）
+# 基础测试
+python test_water.py `
+    --model checkpoints/checkpoint_best.pth `
+    --images D:\Files\Data\IRWSB\test\images `
+    --masks D:\Files\Data\IRWSB\test\masks_white
+
+# 指定输出路径
+python test_water.py `
+    --model checkpoints/checkpoint_best.pth `
+    --images D:\Files\Data\IRWSB\test\images `
+    --masks D:\Files\Data\IRWSB\test\masks_white `
+    --output results/experiment1_test.csv `
+    --batch-size 4 `
+    --amp
+
+
+#测试模型(单张图片推理)
 #测试并保存结果
 python predict.py --model ./checkpoints/checkpoint_epoch5.pth -i "D:\Files\Data\USVInlandDataset\Water Segmentation\training\training\640_320_undistorted\H05_1_0000000000.jpg" -o output.jpg
 #测试不保存结果（仅展示）
