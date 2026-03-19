@@ -33,7 +33,10 @@ python train_water.py `
     --images D:\Files\Data\IRWSB\train\images `
     --masks D:\Files\Data\IRWSB\train\masks_white `
     --val-images D:\Files\Data\IRWSB\val\images `
-    --val-masks D:\Files\Data\IRWSB\val\masks_white
+    --val-masks D:\Files\Data\IRWSB\val\masks_white `
+    --epochs 100 `
+    --batch-size 8 `
+    --learning-rate 5e-4
 #方式3：混合精度 + 多 workers（Linux/Mac）
 python train_water.py `
     --images data/train/images `
