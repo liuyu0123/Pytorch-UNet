@@ -47,6 +47,21 @@ python train_water.py `
     --workers 4 `
     --epochs 50
 
+#训练模型（指定epoch模型保存间隔，model和log保存路径）
+python train_water.py `
+    --images D:\Files\Data\IRWSB\train\images `
+    --masks D:\Files\Data\IRWSB\train\masks_white `
+    --val-images D:\Files\Data\IRWSB\val\images `
+    --val-masks D:\Files\Data\IRWSB\val\masks_white `
+    --epochs 1 `
+    --batch-size 8 `
+    --learning-rate 5e-4 `
+    --model-dir checkpoints/experiment1 `
+    --model-name experiment1 `
+    --log-dir logs/experiment1 `
+    --log-name experiment1 `
+    --save-interval 0
+
 #测试模型（测试集）
 # 基础测试
 python test_water.py `
