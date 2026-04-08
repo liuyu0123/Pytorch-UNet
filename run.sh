@@ -53,9 +53,9 @@ python train_water.py `
     --masks D:\Files\Data\IRWSB\train\masks_white `
     --val-images D:\Files\Data\IRWSB\val\images `
     --val-masks D:\Files\Data\IRWSB\val\masks_white `
-    --epochs 1 `
-    --batch-size 8 `
-    --learning-rate 5e-4 `
+    --epochs 100 `
+    --batch-size 4 `
+    --learning-rate 1e-4 `
     --model-dir checkpoints/experiment1 `
     --model-name experiment1 `
     --log-dir logs/experiment1 `
@@ -81,10 +81,42 @@ python test_water.py `
 
 #测试模型(单张图片推理)
 #测试并保存结果
-python predict.py --model ./checkpoints/checkpoint_epoch5.pth -i "D:\Files\Data\USVInlandDataset\Water Segmentation\training\training\640_320_undistorted\H05_1_0000000000.jpg" -o output.jpg
+python predict.py --model ./checkpoints/checkpoint_epoch100.pth -i "D:\Files\Data\USVInlandDataset\Water Segmentation\training\training\640_320_undistorted\H05_1_0000000000.jpg" -o output.jpg
 #测试不保存结果（仅展示）
 python predict.py --model ./checkpoints1_trained_gt/checkpoint_epoch1.pth -i "D:\Files\Data\USVInlandDataset\Water Segmentation\training\training\640_320_undistorted\H05_1_0000000000.jpg" --viz --no-save
 python predict.py --model ./checkpoints2_trained_lds/checkpoint_epoch1.pth -i "D:\Files\Data\USVInlandDataset\Water Segmentation\training\training\640_320_undistorted\H05_1_0000000000.jpg" --viz --no-save
 python predict.py --model ./checkpoints3_trained_gif/checkpoint_epoch1.pth -i "D:\Files\Data\USVInlandDataset\Water Segmentation\training\training\640_320_undistorted\H05_1_0000000000.jpg" --viz --no-save
 python predict.py --model ./checkpoints4_trained_gif_noamp/checkpoint_epoch5.pth -i "D:\Files\Data\USVInlandDataset\Water Segmentation\training\training\640_320_undistorted\H05_1_0000000000.jpg" --viz --no-save
-python predict.py --model ./checkpoints/checkpoint_epoch1.pth -i "D:\Files\Data\USVInlandDataset\Water Segmentation\training\training\640_320_undistorted\H05_1_0000000000.jpg" --viz --no-save
+python predict.py --model ./checkpoints/checkpoint_epoch100.pth -i "D:\Files\Data\USVInlandDataset\Water Segmentation\training\training\640_320_undistorted\H05_1_0000000000.jpg" --viz --no-save
+
+#模型推理
+python predict.py `
+    --model ./checkpoints/checkpoint_epoch100.pth `
+    -i "D:\Files\Data\USVInlandDataset\Water Segmentation\training\training\640_320_undistorted\H05_1_0000000000.jpg" `
+    --viz `
+    --no-save
+python predict_best.py `
+    --model F:\AAA\1_unet_best\experiment1\experiment1_last.pth `
+    -i "D:\Files\Data\USVInlandDataset\Water Segmentation\training\training\640_320_undistorted\H05_1_0000000000.jpg" `
+    --viz `
+    --no-save
+
+# 单张图片推理 + 保存叠加图
+python predict_best_pro.py `
+    -m F:\AAA\1_unet_best\experiment1\experiment1_last.pth `
+    -i D:\Files\Data\IRWSB\train\images\N03_3_0000011600.jpg `
+    -o ./results_best_pro
+
+# 文件夹批量推理 + 评估（假设真值在 ./masks 文件夹，文件名对应）
+python predict_best_pro.py `
+    -m model.pth `
+    -i ./images `
+    -o ./results `
+    -g ./masks
+
+# 调整红色透明度（0.0-1.0，默认0.4）
+python predict_best_pro.py `
+    -m model.pth `
+    -i ./images `
+    -o ./results `
+    -a 0.6
