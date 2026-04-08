@@ -107,12 +107,12 @@ python predict_best_pro.py `
     -i D:\Files\Data\IRWSB\train\images\N03_3_0000011600.jpg `
     -o ./results_best_pro
 
-# 文件夹批量推理 + 评估（假设真值在 ./masks 文件夹，文件名对应）
+# 文件夹批量推理 + 评估（假设真值在 -g 文件夹，文件名对应）
 python predict_best_pro.py `
-    -m model.pth `
-    -i ./images `
-    -o ./results `
-    -g ./masks
+    -m F:\AAA\1_unet_best\experiment1\experiment1_last.pth `
+    -i D:\Files\Data\IRWSB\analyse\images `
+    -o D:\Files\GitProject\Pytorch-UNet-LY\results_best_pro_train `
+    -g D:\Files\Data\IRWSB\analyse\masks_white_noSuffix
 
 # 调整红色透明度（0.0-1.0，默认0.4）
 python predict_best_pro.py `
