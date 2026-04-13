@@ -1,6 +1,7 @@
 import argparse
 import logging
 import os
+import time
 from pathlib import Path
 import csv
 
@@ -174,14 +175,25 @@ if __name__ == '__main__':
     # 评估数据收集
     results = []
     has_gt = args.ground_truth is not None
-    
+
+    # Warm-up: 用第一张图做一次前向，排除 CUDA 初始化开销对后续计时的影响
+    if input_files:
+        logging.info('Warming up...')
+        dummy_img = Image.open(input_files[0])
+        _ = predict_img(net, dummy_img, device, args.scale, args.mask_threshold)
+        if device.type == 'cuda':
+            torch.cuda.synchronize()
+
     # 批量推理
     for input_file in input_files:
         logging.info(f'Processing: {input_file.name}')
         
         # 加载并推理
         img = Image.open(input_file)
+        start_time = time.time()
         mask = predict_img(net, img, device, args.scale, args.mask_threshold)
+        inference_time = time.time() - start_time
+        fps = 1.0 / inference_time if inference_time > 0 else 0.0
         
         # 保存叠加图
         if output_dir:
@@ -209,9 +221,11 @@ if __name__ == '__main__':
                         'precision': round(p, 4),
                         'recall': round(r, 4),
                         'f1': round(f1, 4),
-                        'miou': round(miou, 4)
+                        'miou': round(miou, 4),
+                        'inference_time': round(inference_time, 4),
+                        'fps': round(fps, 2)
                     })
-                    logging.info(f'  Metrics: P={p:.4f}, R={r:.4f}, F1={f1:.4f}, mIoU={miou:.4f}')
+                    logging.info(f'  Metrics: P={p:.4f}, R={r:.4f}, F1={f1:.4f}, mIoU={miou:.4f}, Time={inference_time:.4f}s, FPS={fps:.2f}')
                 except Exception as e:
                     logging.error(f'  Error evaluating {input_file.name}: {e}')
             else:
@@ -224,14 +238,18 @@ if __name__ == '__main__':
         avg_r = np.mean([x['recall'] for x in results])
         avg_f1 = np.mean([x['f1'] for x in results])
         avg_miou = np.mean([x['miou'] for x in results])
-        
+        avg_time = np.mean([x['inference_time'] for x in results])
+        avg_fps = np.mean([x['fps'] for x in results])
+
         # 添加平均行
         results.append({
             'filename': 'AVERAGE',
             'precision': round(avg_p, 4),
             'recall': round(avg_r, 4),
             'f1': round(avg_f1, 4),
-            'miou': round(avg_miou, 4)
+            'miou': round(avg_miou, 4),
+            'inference_time': round(avg_time, 4),
+            'fps': round(avg_fps, 2)
         })
         
         if output_dir:
@@ -239,21 +257,21 @@ if __name__ == '__main__':
             csv_filename = f"{csv_base_name}.csv"
             csv_path = output_dir / csv_filename
             with open(csv_path, 'w', newline='', encoding='utf-8') as f:
-                writer = csv.DictWriter(f, fieldnames=['filename', 'precision', 'recall', 'f1', 'miou'])
+                writer = csv.DictWriter(f, fieldnames=['filename', 'precision', 'recall', 'f1', 'miou', 'inference_time', 'fps'])
                 writer.writeheader()
                 writer.writerows(results)
             logging.info(f'\nEvaluation CSV saved: {csv_path}')
         else:
             # 终端打印表格
-            print('\n' + '='*70)
+            print('\n' + '='*90)
             print(f'Evaluation Results: {csv_base_name}')
-            print(f'{"Filename":<35} {"Prec":>8} {"Rec":>8} {"F1":>8} {"mIoU":>8}')
-            print('-'*70)
+            print(f'{"Filename":<35} {"Prec":>8} {"Rec":>8} {"F1":>8} {"mIoU":>8} {"Time(s)":>10} {"FPS":>8}')
+            print('-'*90)
             for r in results[:-1]:  # 除平均外
-                print(f"{r['filename']:<35} {r['precision']:>8.4f} {r['recall']:>8.4f} {r['f1']:>8.4f} {r['miou']:>8.4f}")
-            print('-'*70)
-            print(f"{'AVERAGE':<35} {avg_p:>8.4f} {avg_r:>8.4f} {avg_f1:>8.4f} {avg_miou:>8.4f}")
-            print('='*70)
+                print(f"{r['filename']:<35} {r['precision']:>8.4f} {r['recall']:>8.4f} {r['f1']:>8.4f} {r['miou']:>8.4f} {r['inference_time']:>10.4f} {r['fps']:>8.2f}")
+            print('-'*90)
+            print(f"{'AVERAGE':<35} {avg_p:>8.4f} {avg_r:>8.4f} {avg_f1:>8.4f} {avg_miou:>8.4f} {avg_time:>10.4f} {avg_fps:>8.2f}")
+            print('='*90)
     elif has_gt:
         logging.warning('No evaluation results generated (no matching GT files)')
     
