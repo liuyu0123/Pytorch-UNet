@@ -13,25 +13,21 @@ from torch import optim
 from torch.utils.data import DataLoader, random_split
 from tqdm import tqdm
 
-import wandb
+# import wandb
 from evaluate import evaluate
 from unet import UNet
 from utils.data_loading import BasicDataset, CarvanaDataset
 from utils.dice_score import dice_loss
 
-# dir_img = Path('./data/imgs/')
-# dir_mask = Path('./data/masks/')
-# dir_img = Path(r'D:\Files\Data\Carvana_Image_Masking_Challenge\train')
-# dir_mask = Path(r'D:\Files\Data\Carvana_Image_Masking_Challenge\train_masks')
-# 无人船河道检测数据集
-dir_img = Path(r'D:\Files\Data\USVInlandDataset\Water Segmentation\training\training\640_320_undistorted')
-dir_mask = Path(r'D:\Files\Data\USVInlandDataset\Water Segmentation\training\training\640_320_undistorted_gt')
 dir_checkpoint = Path('./checkpoints/')
 
 
 def train_model(
         model,
         device,
+        dir_img: Path,
+        dir_mask: Path,
+        mask_suffix: str = '_mask',
         epochs: int = 5,
         batch_size: int = 1,
         learning_rate: float = 1e-5,
@@ -42,12 +38,13 @@ def train_model(
         weight_decay: float = 1e-8,
         momentum: float = 0.999,
         gradient_clipping: float = 1.0,
+        num_workers: int = 0,  # 新增参数，默认 0（Windows 安全）
 ):
     # 1. Create dataset
     try:
-        dataset = CarvanaDataset(dir_img, dir_mask, img_scale)
+        dataset = CarvanaDataset(dir_img, dir_mask, img_scale, mask_suffix)
     except (AssertionError, RuntimeError, IndexError):
-        dataset = BasicDataset(dir_img, dir_mask, img_scale)
+        dataset = BasicDataset(dir_img, dir_mask, img_scale, mask_suffix)
 
     # 2. Split into train / validation partitions
     n_val = int(len(dataset) * val_percent)
@@ -55,16 +52,10 @@ def train_model(
     train_set, val_set = random_split(dataset, [n_train, n_val], generator=torch.Generator().manual_seed(0))
 
     # 3. Create data loaders
-    loader_args = dict(batch_size=batch_size, num_workers=os.cpu_count(), pin_memory=True)
+    # Windows 建议 num_workers=0，Linux/Mac 可以设为 4 或更高
+    loader_args = dict(batch_size=batch_size, num_workers=num_workers, pin_memory=True if device.type == 'cuda' else False)
     train_loader = DataLoader(train_set, shuffle=True, **loader_args)
     val_loader = DataLoader(val_set, shuffle=False, drop_last=True, **loader_args)
-
-    # (Initialize logging)
-    experiment = wandb.init(project='U-Net', resume='allow', anonymous='must')
-    experiment.config.update(
-        dict(epochs=epochs, batch_size=batch_size, learning_rate=learning_rate,
-             val_percent=val_percent, save_checkpoint=save_checkpoint, img_scale=img_scale, amp=amp)
-    )
 
     logging.info(f'''Starting training:
         Epochs:          {epochs}
@@ -76,13 +67,18 @@ def train_model(
         Device:          {device.type}
         Images scaling:  {img_scale}
         Mixed Precision: {amp}
+        Num workers:     {num_workers}
     ''')
 
     # 4. Set up the optimizer, the loss, the learning rate scheduler and the loss scaling for AMP
     optimizer = optim.RMSprop(model.parameters(),
                               lr=learning_rate, weight_decay=weight_decay, momentum=momentum, foreach=True)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=5)  # goal: maximize Dice score
-    grad_scaler = torch.cuda.amp.GradScaler(enabled=amp)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=5)
+    
+    # 修复 FutureWarning：使用新的 torch.amp API
+    device_type = 'cuda' if device.type == 'cuda' else 'cpu'
+    grad_scaler = torch.amp.GradScaler(device_type, enabled=amp)
+    
     criterion = nn.CrossEntropyLoss() if model.n_classes > 1 else nn.BCEWithLogitsLoss()
     global_step = 0
 
@@ -102,7 +98,7 @@ def train_model(
                 images = images.to(device=device, dtype=torch.float32, memory_format=torch.channels_last)
                 true_masks = true_masks.to(device=device, dtype=torch.long)
 
-                with torch.autocast(device.type if device.type != 'mps' else 'cpu', enabled=amp):
+                with torch.autocast(device_type, enabled=amp):
                     masks_pred = model(images)
                     if model.n_classes == 1:
                         loss = criterion(masks_pred.squeeze(1), true_masks.float())
@@ -125,44 +121,14 @@ def train_model(
                 pbar.update(images.shape[0])
                 global_step += 1
                 epoch_loss += loss.item()
-                experiment.log({
-                    'train loss': loss.item(),
-                    'step': global_step,
-                    'epoch': epoch
-                })
                 pbar.set_postfix(**{'loss (batch)': loss.item()})
 
                 # Evaluation round
                 division_step = (n_train // (5 * batch_size))
                 if division_step > 0:
                     if global_step % division_step == 0:
-                        histograms = {}
-                        for tag, value in model.named_parameters():
-                            tag = tag.replace('/', '.')
-                            if not (torch.isinf(value) | torch.isnan(value)).any():
-                                histograms['Weights/' + tag] = wandb.Histogram(value.data.cpu())
-                            if not (torch.isinf(value.grad) | torch.isnan(value.grad)).any():
-                                histograms['Gradients/' + tag] = wandb.Histogram(value.grad.data.cpu())
-
                         val_score = evaluate(model, val_loader, device, amp)
                         scheduler.step(val_score)
-
-                        logging.info('Validation Dice score: {}'.format(val_score))
-                        try:
-                            experiment.log({
-                                'learning rate': optimizer.param_groups[0]['lr'],
-                                'validation Dice': val_score,
-                                'images': wandb.Image(images[0].cpu()),
-                                'masks': {
-                                    'true': wandb.Image(true_masks[0].float().cpu()),
-                                    'pred': wandb.Image(masks_pred.argmax(dim=1)[0].float().cpu()),
-                                },
-                                'step': global_step,
-                                'epoch': epoch,
-                                **histograms
-                            })
-                        except:
-                            pass
 
         if save_checkpoint:
             Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
@@ -185,6 +151,15 @@ def get_args():
     parser.add_argument('--amp', action='store_true', default=False, help='Use mixed precision')
     parser.add_argument('--bilinear', action='store_true', default=False, help='Use bilinear upsampling')
     parser.add_argument('--classes', '-c', type=int, default=2, help='Number of classes')
+    parser.add_argument('--images', '-i', type=str, required=True, 
+                        help='Path to the images directory')
+    parser.add_argument('--masks', '-m', type=str, required=True, 
+                        help='Path to the masks directory')
+    parser.add_argument('--mask-suffix', type=str, default='_mask',
+                        help='Suffix for mask files (default: _mask)')
+    # 新增 num_workers 参数
+    parser.add_argument('--workers', '-w', type=int, default=0,
+                        help='Number of data loading workers (default: 0, recommended for Windows)')
 
     return parser.parse_args()
 
@@ -196,9 +171,9 @@ if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     logging.info(f'Using device {device}')
 
-    # Change here to adapt to your data
-    # n_channels=3 for RGB images
-    # n_classes is the number of probabilities you want to get per pixel
+    dir_img = Path(args.images)
+    dir_mask = Path(args.masks)
+
     model = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
     model = model.to(memory_format=torch.channels_last)
 
@@ -214,16 +189,21 @@ if __name__ == '__main__':
         logging.info(f'Model loaded from {args.load}')
 
     model.to(device=device)
+    
     try:
         train_model(
             model=model,
+            device=device,
+            dir_img=dir_img,
+            dir_mask=dir_mask,
+            mask_suffix=args.mask_suffix,
             epochs=args.epochs,
             batch_size=args.batch_size,
             learning_rate=args.lr,
-            device=device,
             img_scale=args.scale,
             val_percent=args.val / 100,
-            amp=args.amp
+            amp=args.amp,
+            num_workers=args.workers  # 传入 workers 参数
         )
     except torch.cuda.OutOfMemoryError:
         logging.error('Detected OutOfMemoryError! '
@@ -233,11 +213,15 @@ if __name__ == '__main__':
         model.use_checkpointing()
         train_model(
             model=model,
+            device=device,
+            dir_img=dir_img,
+            dir_mask=dir_mask,
+            mask_suffix=args.mask_suffix,
             epochs=args.epochs,
             batch_size=args.batch_size,
             learning_rate=args.lr,
-            device=device,
             img_scale=args.scale,
             val_percent=args.val / 100,
-            amp=args.amp
+            amp=args.amp,
+            num_workers=args.workers
         )
